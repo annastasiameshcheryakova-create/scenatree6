@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+      body { margin: 0; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <a-scene 
+      mindar-image="imageTargetSrc:targets.mind; maxTrack: 2;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" 
+      device-orientation-permission-ui="enabled: false">
+      
+      <a-assets>
+        <video id="ocean-video" src="23009-332257760_medium.mp4" loop="true" crossorigin="anonymous" muted="true"></video>
+        <a-asset-item id="ship-model" src="cartoonic_pirates_ship.glb"></a-asset-item>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="far: ${customFields.lib_raycaster_far}; objects: .clickable"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-video 
+          src="#ocean-video" 
+          width="1" height="0.6" 
+          position="0 0 0" 
+          autoplay="true" 
+          loop="true" 
+          muted="true" 
+          playsinline 
+          webkit-playsinline>
+        </a-video>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-gltf-model 
+          id="pirate-ship"
+          class="clickable"
+          src="#ship-model" 
+          position="0 0 0" 
+          scale="0.2 0.2 0.2" 
+          rotation="0 0 0"
+          ship-rotation-logic>
+        </a-gltf-model>
+      </a-entity>
+    </a-scene>
+
+    <script>
+      
+      AFRAME.registerComponent('ship-rotation-logic', {
+        init: function () {
+          const el = this.el;
+          el.addEventListener('click', () => {
+            
+            const randomAngle = Math.floor(Math.random() * (90 - 45 + 1)) + 45;
+            const currentRotation = el.getAttribute('rotation');
+            el.setAttribute('rotation', {
+              x: currentRotation.x,
+              y: currentRotation.y,
+              z: currentRotation.z + randomAngle
+            });
+            
+            console.log(`Повернуто на ${randomAngle}°. Поточний Z: ${currentRotation.z + randomAngle}`);
+          });
+        }
+      });
+
+      const videoEl = document.querySelector('#ocean-video');
+      const targetEls = document.querySelectorAll('[mindar-image-target]');
+      const activeTargets = new Set();
+
+      targetEls.forEach((targetEl, idx) => {
+        targetEl.addEventListener('targetFound', () => {
+          activeTargets.add(idx);
+          videoEl.play().catch(err => console.warn('Не удалось запустить видео:', err));
+        });
+        targetEl.addEventListener('targetLost', () => {
+          activeTargets.delete(idx);
+          if (activeTargets.size === 0) {
+            videoEl.pause();
+          }
+        });
+      });
+
+      document.querySelector('a-scene').addEventListener('renderstart', () => {
+        videoEl.play().catch(err => console.warn('Автозапуск видео от renderstart:', err));
+      });
+
+    </script>
+  </body>
+</html>
